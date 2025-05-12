@@ -152,14 +152,14 @@ export default function MovieDetailsScreen() {
             onPress={() => router.push('/')}
             style={styles.navButton}
           >
-            <Text style={styles.navButtonText}>🏠 Back to Home</Text>
+            <Text style={styles.navButtonText}>🏠 Home</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => router.push('/two')}
             style={styles.navButton}
           >
-            <Text style={styles.navButtonText}>🎬 Go to Tab 2</Text>
+            <Text style={styles.navButtonText}>🎬 Browse</Text>
           </TouchableOpacity>
         </View>
       </View>

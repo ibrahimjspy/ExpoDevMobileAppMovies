@@ -1,22 +1,25 @@
+// app/(tabs)/all-movies.tsx
 import React, { useState, useEffect } from 'react';
 import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Text,
-  View,
-  TouchableOpacity,
-  TextInput,
 } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import MovieCard from '../../components/MovieCard';
 import { API_KEY } from '@/constants/app';
 import { useRouter } from 'expo-router';
+import { COLORS } from '@/theme';
 
 export default function AllMoviesScreen() {
   const [movies, setMovies] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,11 +85,8 @@ export default function AllMoviesScreen() {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedQuery(searchQuery);
-    }, 500); // 500ms debounce
-
-    return () => {
-      clearTimeout(handler);
-    };
+    }, 500);
+    return () => clearTimeout(handler);
   }, [searchQuery]);
 
   useEffect(() => {
@@ -100,7 +100,7 @@ export default function AllMoviesScreen() {
   useEffect(() => {
     setMovies([]);
     setPage(1);
-    fetchMovies(page);
+    fetchMovies(1);
   }, [debouncedQuery, selectedGenre]);
 
   const handleLoadMore = () => {
@@ -109,15 +109,13 @@ export default function AllMoviesScreen() {
     }
   };
 
-  if (loading && movies.length === 0)
-    return <ActivityIndicator size="large" style={styles.centered} />;
   if (error) return <Text style={styles.centered}>{error}</Text>;
 
   return (
     <View style={styles.background}>
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Search and Filter */}
-        <View style={styles.searchFilterContainer}>
+      {/* Search & Filter */}
+      <View style={styles.searchFilterContainer}>
+        <View style={styles.searchWrapper}>
           <TextInput
             placeholder="Search movies..."
             style={styles.searchInput}
@@ -133,77 +131,86 @@ export default function AllMoviesScreen() {
               <Text style={styles.clearButtonText}>×</Text>
             </TouchableOpacity>
           )}
-
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setShowFilters(!showFilters)}
-          >
-            <Text style={styles.filterText}>Filter</Text>
-          </TouchableOpacity>
         </View>
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => setShowFilters(!showFilters)}
+        >
+          <Text style={styles.filterText}>Filter</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Genre Filters */}
-        {showFilters && (
-          <ScrollView
-            horizontal
-            contentContainerStyle={styles.genreFilterContainer}
-          >
-            {genres.map((genre) => (
-              <TouchableOpacity
-                key={genre.id}
+      {/* Genre Filters */}
+      {showFilters && !loading && (
+        <ScrollView horizontal style={styles.genreFilterContainer}>
+          {genres.map((genre) => (
+            <TouchableOpacity
+              key={genre.id}
+              style={[
+                styles.genreButton,
+                selectedGenre === genre.id && styles.genreButtonActive,
+              ]}
+              onPress={() =>
+                setSelectedGenre(selectedGenre === genre.id ? null : genre.id)
+              }
+            >
+              <Text
                 style={[
-                  styles.genreButton,
-                  selectedGenre === genre.id && styles.genreButtonActive,
+                  styles.genreText,
+                  selectedGenre === genre.id && { color: '#fff' },
                 ]}
-                onPress={() => {
-                  setSelectedGenre(
-                    selectedGenre === genre.id ? null : genre.id,
-                  );
-                }}
               >
-                <Text
-                  style={[
-                    styles.genreText,
-                    selectedGenre === genre.id && { color: '#fff' },
-                  ]}
-                >
-                  {genre.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
+                {genre.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
-        {/* Movie Cards */}
-        {movies.map((movie: any) => (
-          <MovieCard
-            key={movie.id}
-            movie={{
-              id: movie.id,
-              title: movie.title,
-              description: movie.overview,
-              image: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
-            }}
-            isFavorite={favorites.includes(movie.id)}
-            onToggleFavorite={() => toggleFavorite(movie.id)}
-            onPressDetails={() => router.push(`/movie/${movie.id}`)}
+      {loading && movies.length === 0 && (
+        <View style={styles.centered}>
+          <ActivityIndicator
+            size="large"
+            color="#000"
+            style={styles.inlineLoader}
           />
-        ))}
+        </View>
+      )}
 
-        {/* Load More or End */}
-        {hasMore ? (
-          <TouchableOpacity
-            style={styles.loadMoreButton}
-            onPress={handleLoadMore}
-          >
-            <Text style={styles.loadMoreText}>
-              {loading ? 'Loading...' : 'Load More'}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <Text style={styles.endText}>No more movies to load.</Text>
-        )}
-      </ScrollView>
+      {!loading && (
+        <ScrollView contentContainerStyle={styles.container}>
+          {movies.map((movie, idx) => (
+            <Animated.View key={movie.id} entering={FadeInUp.delay(idx * 30)}>
+              <MovieCard
+                movie={{
+                  id: movie.id,
+                  title: movie.title,
+                  description: movie.overview,
+                  image: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+                }}
+                isFavorite={favorites.includes(movie.id)}
+                onToggleFavorite={() => toggleFavorite(movie.id)}
+                onPressDetails={() => router.push(`/movie/${movie.id}`)}
+              />
+            </Animated.View>
+          ))}
+
+          {/* Load More */}
+          {hasMore ? (
+            <TouchableOpacity
+              style={styles.loadMoreButton}
+              onPress={handleLoadMore}
+              disabled={loading}
+            >
+              <Text style={styles.loadMoreText}>
+                {loading ? 'Loading...' : 'Load More'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.endText}>No more movies to load.</Text>
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -213,10 +220,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#e6ecf0',
   },
-  container: {
-    padding: 10,
-    paddingBottom: 20,
-  },
   centered: {
     flex: 1,
     justifyContent: 'center',
@@ -224,12 +227,14 @@ const styles = StyleSheet.create({
   },
   searchFilterContainer: {
     flexDirection: 'row',
-    marginBottom: 10,
-    paddingHorizontal: 10,
+    margin: 10,
     alignItems: 'center',
   },
-  searchInput: {
+  searchWrapper: {
     flex: 1,
+    position: 'relative',
+  },
+  searchInput: {
     height: 40,
     borderWidth: 1,
     borderColor: '#ccc',
@@ -237,9 +242,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: '#fff',
   },
+  clearButton: {
+    position: 'absolute',
+    right: 10,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
+  clearButtonText: {
+    fontSize: 18,
+    color: '#888',
+  },
   filterButton: {
     marginLeft: 10,
-    backgroundColor: '#007bff',
+    backgroundColor: COLORS.primary,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
@@ -249,9 +265,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   genreFilterContainer: {
-    flexDirection: 'row',
     paddingVertical: 10,
     paddingHorizontal: 10,
+    zIndex: 100,
+    height: 200,
   },
   genreButton: {
     paddingHorizontal: 12,
@@ -261,10 +278,14 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   genreButtonActive: {
-    backgroundColor: '#007bff',
+    backgroundColor: COLORS.primary,
   },
   genreText: {
     color: '#000',
+  },
+  container: {
+    paddingBottom: 20,
+    paddingHorizontal: 10,
   },
   loadMoreButton: {
     backgroundColor: '#007bff',
@@ -285,13 +306,7 @@ const styles = StyleSheet.create({
     marginVertical: 15,
     fontSize: 14,
   },
-  clearButton: {
-    paddingHorizontal: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  clearButtonText: {
-    fontSize: 18,
-    color: '#888',
+  inlineLoader: {
+    marginVertical: 20,
   },
 });

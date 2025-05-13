@@ -1,13 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs } from 'expo-router';
 import { Pressable } from 'react-native';
 
-import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import { COLORS } from '@/theme';
 
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
+// A small wrapper so we don't repeat size/margin
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
   color: string;
@@ -21,9 +22,11 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
+        // Active tab icon = primary, inactive = secondary
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.secondary,
+
+        // Hide header above tabs
         headerShown: useClientOnlyValue(false, true),
       }}
     >
@@ -32,7 +35,10 @@ export default function TabLayout() {
         options={{
           title: '',
           headerShown: false,
+
+          // Let Expo Router inject `color` for active/inactive
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+
           headerRight: () => (
             <Link href="/modal" asChild>
               <Pressable>
@@ -40,7 +46,8 @@ export default function TabLayout() {
                   <FontAwesome
                     name="info-circle"
                     size={25}
-                    color={Colors[colorScheme ?? 'light'].text}
+                    // always primary so it stands out
+                    color={COLORS.primary}
                     style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
                   />
                 )}
@@ -49,12 +56,15 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="two"
         options={{
           title: '',
-          tabBarIcon: ({ color }) => <TabBarIcon name="imdb" color={color} />,
           headerShown: false,
+
+          // Again, use the passed-in `color`
+          tabBarIcon: ({ color }) => <TabBarIcon name="imdb" color={color} />,
         }}
       />
     </Tabs>

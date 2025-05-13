@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import MovieCard from '../components/MovieCard';
@@ -5,11 +6,11 @@ import { API_KEY } from '@/constants/app';
 
 export default function AllMoviesScreen() {
   const [movies, setMovies] = useState([]);
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>(null);
 
-  const toggleFavorite = (movieId) => {
+  const toggleFavorite = (movieId: any) => {
     setFavorites((prev) =>
       prev.includes(movieId)
         ? prev.filter((id) => id !== movieId)
@@ -39,7 +40,7 @@ export default function AllMoviesScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      {movies.map((movie) => (
+      {movies.map((movie: any) => (
         <MovieCard
           key={movie.id}
           movie={{

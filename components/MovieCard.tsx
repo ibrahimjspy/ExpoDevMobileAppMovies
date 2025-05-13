@@ -9,6 +9,7 @@ import {
   Animated,
 } from 'react-native';
 import { useRef } from 'react';
+import { COLORS } from '@/theme';
 
 export default function MovieCard({
   movie,
@@ -70,7 +71,7 @@ export default function MovieCard({
                   styles.favoriteText,
                   {
                     transform: [{ scale: scaleAnim }],
-                    color: isFavorite ? 'red' : 'gray',
+                    color: isFavorite ? COLORS.primary : 'gray',
                   },
                 ]}
               >
@@ -78,7 +79,7 @@ export default function MovieCard({
               </Animated.Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onPressDetails} style={styles.button}>
-              <Text style={{ color: '#007bff' }}>Details →</Text>
+              <Text style={{ color: COLORS.primary }}>Details →</Text>
             </TouchableOpacity>
           </View>
         </View>

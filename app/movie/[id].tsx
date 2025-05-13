@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+// app/movie/[id].tsx
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,19 @@ import {
   ActivityIndicator,
   StyleSheet,
   Dimensions,
+  FlatList,
   TouchableOpacity,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { COLORS, SPACING, FONTS } from '@/theme';
 import { API_KEY } from '@/constants/app';
 
-const screenWidth = Dimensions.get('window').width;
+const { width: SCREEN_W } = Dimensions.get('window');
+const BANNER_H = SCREEN_W * 0.6;
 
-const genreColors = {
+const genreColors: Record<string, string> = {
   Action: '#ff4c4c',
   Comedy: '#ffc107',
   Drama: '#4caf50',
@@ -30,246 +35,247 @@ const genreColors = {
 
 export default function MovieDetailsScreen() {
   const { id } = useLocalSearchParams();
-  const navigation = useNavigation();
-  const [movie, setMovie] = useState(null);
-  const [similarMovies, setSimilarMovies] = useState([]);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [movie, setMovie] = useState<any>(null);
+  const [similar, setSimilar] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    navigation.setOptions({ headerShown: false }); // hide top bar
-  }, []);
-
-  useEffect(() => {
-    const fetchMovieDetails = async () => {
+    (async () => {
       try {
         const res = await fetch(
-          `https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}&append_to_response=similar`,
+          `https://api.themoviedb.org/3/movie/${id}` +
+            `?api_key=${API_KEY}&append_to_response=similar`,
         );
-        const json = await res.json();
-        setMovie(json);
-        setSimilarMovies(json.similar?.results || []);
+        const data = await res.json();
+        setMovie(data);
+        setSimilar(data.similar?.results || []);
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
-    };
-    fetchMovieDetails();
+    })();
   }, [id]);
 
-  if (loading)
-    return <ActivityIndicator size="large" style={styles.centered} />;
-  if (!movie) return <Text style={styles.centered}>Movie not found.</Text>;
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+  if (!movie) {
+    return (
+      <View style={styles.loaderContainer}>
+        <Text style={{ color: COLORS.text }}>Movie not found.</Text>
+      </View>
+    );
+  }
 
   const primaryGenre = movie.genres?.[0]?.name || 'Default';
   const themeColor = genreColors[primaryGenre] || genreColors.Default;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={[styles.bannerContainer]}>
+    <ScrollView style={styles.screen}>
+      {/* Banner + Gradient */}
+      <View style={styles.bannerWrapper}>
         <Image
           source={{
-            uri: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+            uri: `https://image.tmdb.org/t/p/w780${movie.backdrop_path || movie.poster_path}`,
           }}
           style={styles.banner}
+          resizeMode="cover"
         />
-        <View style={styles.overlay}>
-          <Text style={styles.bannerTitle}>{movie.title}</Text>
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.7)']}
+          style={styles.gradient}
+        />
+        <View style={styles.headerText}>
+          <Text style={styles.title}>{movie.title}</Text>
           {movie.tagline ? (
             <Text style={styles.tagline}>"{movie.tagline}"</Text>
           ) : null}
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Overview</Text>
-        <Text style={styles.text}>
+      {/* Overview Card */}
+      <Animated.View entering={FadeInUp.delay(100)} style={[styles.card]}>
+        <Text style={styles.cardTitle}>Overview</Text>
+        <Text style={styles.cardText}>
           {movie.overview || 'No overview available.'}
         </Text>
-      </View>
+      </Animated.View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Details</Text>
-        <Text style={styles.detail}>Release Date: {movie.release_date}</Text>
-        <Text style={styles.detail}>Runtime: {movie.runtime} min</Text>
-        <Text style={styles.detail}>Status: {movie.status}</Text>
-        <Text style={styles.detail}>
-          Rating: {movie.vote_average} / 10 ({movie.vote_count} votes)
-        </Text>
-        <Text style={styles.detail}>
-          Budget: ${movie.budget?.toLocaleString() || 'N/A'}
-        </Text>
-        <Text style={styles.detail}>
-          Revenue: ${movie.revenue?.toLocaleString() || 'N/A'}
-        </Text>
-      </View>
+      {/* Details Card */}
+      <Animated.View entering={FadeInUp.delay(200)} style={[styles.card]}>
+        <Text style={styles.cardTitle}>Details</Text>
+        {[
+          `Release Date: ${movie.release_date}`,
+          `Runtime: ${movie.runtime} min`,
+          `Status: ${movie.status}`,
+          `Rating: ${movie.vote_average} / 10`,
+          `Budget: $${movie.budget?.toLocaleString() || 'N/A'}`,
+          `Revenue: $${movie.revenue?.toLocaleString() || 'N/A'}`,
+        ].map((line) => (
+          <Text key={line} style={styles.detailText}>
+            {line}
+          </Text>
+        ))}
+      </Animated.View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Genres</Text>
-        <View style={styles.genreContainer}>
-          {movie.genres.map((genre) => (
+      {/* Genres */}
+      <Animated.View entering={FadeInUp.delay(300)} style={[styles.card]}>
+        <Text style={styles.cardTitle}>Genres</Text>
+        <View style={styles.genreRow}>
+          {movie.genres.map((g: any) => (
             <View
-              key={genre.id}
+              key={g.id}
               style={[styles.genreBadge, { backgroundColor: themeColor }]}
             >
-              <Text style={styles.genreText}>{genre.name}</Text>
+              <Text style={styles.genreText}>{g.name}</Text>
             </View>
           ))}
         </View>
-      </View>
+      </Animated.View>
 
-      {similarMovies.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Similar Movies</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {similarMovies.map((sim) => (
+      {/* Similar Movies */}
+      {similar.length > 0 && (
+        <Animated.View entering={FadeInUp.delay(400)} style={[styles.card]}>
+          <Text style={styles.cardTitle}>Similar Movies</Text>
+          <FlatList
+            data={similar}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.similarList}
+            renderItem={({ item }) => (
               <TouchableOpacity
-                key={sim.id}
-                onPress={() => router.push(`/movie/${sim.id}`)}
+                style={styles.similarCard}
+                onPress={() => router.push(`/movie/${item.id}`)}
               >
-                <View key={sim.id} style={styles.similarCard}>
-                  <Image
-                    source={{
-                      uri: `https://image.tmdb.org/t/p/w200${sim.poster_path}`,
-                    }}
-                    style={styles.similarPoster}
-                  />
-                  <Text style={styles.similarText} numberOfLines={2}>
-                    {sim.title}
-                  </Text>
-                </View>
+                <Image
+                  source={{
+                    uri: `https://image.tmdb.org/t/p/w185${item.poster_path}`,
+                  }}
+                  style={styles.similarImage}
+                  resizeMode="cover"
+                />
+                <Text style={styles.similarTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+            )}
+          />
+        </Animated.View>
       )}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Navigation</Text>
-
-        <View style={styles.navColumn}>
-          <TouchableOpacity
-            onPress={() => router.push('/')}
-            style={styles.navButton}
-          >
-            <Text style={styles.navButtonText}>🏠 Home</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/two')}
-            style={styles.navButton}
-          >
-            <Text style={styles.navButtonText}>🎬 Browse</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { paddingBottom: 30, backgroundColor: '#fdf6ff' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  bannerContainer: {
+  screen: { flex: 1, backgroundColor: COLORS.background },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+  },
+
+  bannerWrapper: {
+    width: '100%',
+    height: BANNER_H,
     position: 'relative',
   },
   banner: {
-    width: screenWidth,
-    height: screenWidth * 0.9,
+    width: '100%',
+    height: '100%',
   },
-  overlay: {
+  gradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  headerText: {
     position: 'absolute',
-    bottom: 10,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    padding: 10,
-    borderRadius: 10,
+    bottom: SPACING.md,
+    left: SPACING.md,
+    right: SPACING.md,
   },
-  bannerTitle: {
-    fontSize: 26,
+  title: {
+    fontSize: FONTS.h1,
     fontWeight: 'bold',
     color: '#fff',
   },
   tagline: {
-    fontSize: 16,
+    fontSize: FONTS.body,
     fontStyle: 'italic',
     color: '#eee',
-    marginTop: 4,
+    marginTop: SPACING.xs,
   },
-  section: {
-    marginTop: 20,
-    marginHorizontal: 20,
+
+  card: {
+    backgroundColor: COLORS.surface,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.md,
+    borderRadius: 12,
+    padding: SPACING.md,
+    // iOS shadow
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    // Android shadow
+    elevation: 3,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: '#ccc',
-    paddingBottom: 5,
-    color: '#4a148c',
+  cardTitle: {
+    fontSize: FONTS.h2,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginBottom: SPACING.sm,
   },
-  text: {
-    fontSize: 16,
-    color: '#333',
+  cardText: {
+    fontSize: FONTS.body,
+    color: COLORS.text,
+    lineHeight: 22,
   },
-  detail: {
-    fontSize: 15,
-    color: '#555',
-    marginVertical: 2,
+  detailText: {
+    fontSize: FONTS.body,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
   },
-  genreContainer: {
+
+  genreRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
   },
   genreBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: 16,
+    marginRight: SPACING.xs,
+    marginBottom: SPACING.xs,
   },
   genreText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: FONTS.body,
+  },
+
+  similarList: {
+    paddingVertical: SPACING.sm,
   },
   similarCard: {
-    marginRight: 12,
+    width: 100,
+    marginRight: SPACING.md,
     alignItems: 'center',
-    width: 120,
   },
-  similarPoster: {
+  similarImage: {
     width: 100,
     height: 150,
     borderRadius: 8,
-    marginBottom: 6,
   },
-  similarText: {
+  similarTitle: {
     fontSize: 12,
+    color: COLORS.text,
     textAlign: 'center',
-    color: '#333',
-  },
-  navColumn: {
-    flexDirection: 'row',
-    alignItems: 'center', // centers horizontally
-    width: '100%', // makes sure children don't wrap
-  },
-
-  navButton: {
-    backgroundColor: '#d1c4e9',
-    padding: 12,
-    marginRight: '2%',
-    borderRadius: 8,
-    alignItems: 'center',
-    width: '49%', // adjust to control button width
-    marginBottom: 12, // spacing between buttons
-  },
-
-  navButtonText: {
-    color: '#4a148c',
-    fontWeight: 'bold',
-    fontSize: 16,
+    marginTop: SPACING.xs,
   },
 });
